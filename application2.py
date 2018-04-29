@@ -1,7 +1,3 @@
-"""
-Provided code for Application portion of Module 2
-"""
-
 # general imports
 import urllib2
 import random
@@ -13,6 +9,7 @@ import bfs_visited
 import matplotlib.pyplot as plt
 import upa_trail
 import Project1_Graph as simple_graph
+import numpy as np
 
 
 ############################################
@@ -96,6 +93,8 @@ def load_graph(graph_url):
     return answer_graph
 
 
+##########################################################
+# Code for generating random graph
 def er_ugraph(num_nodes, p):
     """
     create a random generated graph
@@ -145,31 +144,66 @@ def num_edges(ugraph):
         total_edges += len(edges)
     return total_edges / 2
 
-# Generate the random graphs
-network_graph = load_graph(NETWORK_URL)
 
-num_nodes = len(network_graph.keys())
-num_edges_network = num_edges(network_graph)
+def upa_graph(num_nodes, ave_out_degree):
+    """
+    generate upa graph
+    :param num_nodes: total number of nodes
+    :param ave_out_degree: this controls the edges
+    :return:
+    """
+    trail = upa_trail.UPATrial(ave_out_degree)
+    ugraph = simple_graph.make_complete_graph(ave_out_degree)
 
-# Probability
-er_prob = num_edges_network * 2.0 / (num_nodes * num_nodes)
-ugraph_er = er_ugraph(num_nodes, er_prob)
+    for i in xrange(ave_out_degree, num_nodes):
+        ugraph[i] = trail.run_trial(ave_out_degree)
+        for neigh in ugraph[i]:
+            ugraph[neigh].add(i)
 
-ave_out_degree = num_edges_network / num_nodes
+    return ugraph
 
-print ave_out_degree
 
-trail = upa_trail.UPATrial(ave_out_degree)
-upa_graph = simple_graph.make_complete_graph(ave_out_degree)
+if __name__ == '__main__':
+    network_graph = load_graph(NETWORK_URL)
 
-print upa_graph
+    num_nodes_total = len(network_graph.keys())
+    num_edges_network = num_edges(network_graph)
 
-for i in xrange(ave_out_degree, num_nodes):
-    upa_graph[i] = trail.run_trial(ave_out_degree)
-    for neigh in upa_graph[i]:
-        upa_graph[neigh].add(i)
+    # Probability
+    er_prob = num_edges_network * 2.0 / (num_nodes_total * num_nodes_total)
+    ugraph_er = er_ugraph(num_nodes_total, er_prob)
 
-print num_edges(ugraph_er)
-print len(ugraph_er.keys())
+    average_out_degree = num_edges_network / num_nodes_total
+    ugraph_upa = upa_graph(num_nodes_total, average_out_degree)
 
-print num_edges(upa_graph)
+    resilience_network = np.zeros(1 + num_nodes_total)
+    resilience_er = np.zeros(1 + num_nodes_total)
+    resilience_upa = np.zeros(1 + num_nodes_total)
+
+    print "ER probability", er_prob
+    print "UPA m", average_out_degree
+
+    # Take the average of 3 resilience
+    for dummy_idx in range(3):
+        cloned_network = copy_graph(network_graph)
+        resilience_network = resilience_network + \
+                np.array(bfs_visited.compute_resilience(cloned_network, random_order(cloned_network, num_nodes_total)))
+        cloned_er = copy_graph(ugraph_er)
+        resilience_er = resilience_er + \
+            np.array(bfs_visited.compute_resilience(cloned_er, random_order(cloned_er, num_nodes_total)))
+        cloned_upa = copy_graph(ugraph_upa)
+        resilience_upa = resilience_upa + \
+            np.array(bfs_visited.compute_resilience(cloned_upa, random_order(cloned_upa, num_nodes_total)))
+
+    resilience_network /= 3.0
+    resilience_er /= 3.0
+    resilience_upa /= 3.0
+
+    xvals = range(num_nodes_total + 1)
+    plt.plot(xvals, resilience_network, '-b', label='network graph')
+    plt.plot(xvals, resilience_er, '-r', label='er graph, p=' + str(er_prob))
+    plt.plot(xvals, resilience_upa, '-m', label='UPA graph, m=' + str(average_out_degree))
+    plt.legend(loc='upper right')
+    plt.xlabel("Number of nodes removed")
+    plt.ylabel("Largest size of connected componentsap")
+    plt.show()
