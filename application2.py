@@ -10,7 +10,22 @@ import matplotlib.pyplot as plt
 import upa_trail
 import Project1_Graph as simple_graph
 import numpy as np
+import resilience_uf as uf
 
+USE_UF = True
+
+
+def compute_resilience(ugraph, attack_order):
+    """
+    Alias to bfs or union find
+    :param ugraph:
+    :param attack_order:
+    :return:
+    """
+    if USE_UF:
+        return uf.compute_resilience_uf(ugraph, attack_order)
+    else:
+        return bfs_visited.compute_resilience(ugraph, attack_order)
 
 ############################################
 # Provided code
@@ -217,16 +232,13 @@ if __name__ == '__main__':
 
     # Take the average of 3 resilience
     for dummy_idx in range(3):
-        cloned_network = copy_graph(network_graph)
         resilience_network = resilience_network + \
-                             np.array(bfs_visited.compute_resilience(cloned_network,
-                                                                     random_order(cloned_network, num_nodes_total)))
-        cloned_er = copy_graph(ugraph_er)
+                             np.array(compute_resilience(network_graph,
+                                                         random_order(network_graph, num_nodes_total)))
         resilience_er = resilience_er + \
-                        np.array(bfs_visited.compute_resilience(cloned_er, random_order(cloned_er, num_nodes_total)))
-        cloned_upa = copy_graph(ugraph_upa)
+                        np.array(compute_resilience(ugraph_er, random_order(ugraph_er, num_nodes_total)))
         resilience_upa = resilience_upa + \
-                         np.array(bfs_visited.compute_resilience(cloned_upa, random_order(cloned_upa, num_nodes_total)))
+                         np.array(compute_resilience(ugraph_upa, random_order(ugraph_upa, num_nodes_total)))
 
     resilience_network /= 3.0
     resilience_er /= 3.0
@@ -249,16 +261,13 @@ if __name__ == '__main__':
     resilience_upa = np.zeros(1 + num_nodes_total)
 
     for dummy_idx in range(3):
-        cloned_network = copy_graph(network_graph)
         resilience_network = resilience_network + \
-                             np.array(bfs_visited.compute_resilience(cloned_network,
-                                                                     fast_targeted_order(cloned_network)))
-        cloned_er = copy_graph(ugraph_er)
+                             np.array(compute_resilience(network_graph,
+                                                         fast_targeted_order(network_graph)))
         resilience_er = resilience_er + \
-                        np.array(bfs_visited.compute_resilience(cloned_er, fast_targeted_order(cloned_er)))
-        cloned_upa = copy_graph(ugraph_upa)
+                        np.array(compute_resilience(ugraph_er, fast_targeted_order(ugraph_er)))
         resilience_upa = resilience_upa + \
-                         np.array(bfs_visited.compute_resilience(cloned_upa, fast_targeted_order(cloned_upa)))
+                         np.array(compute_resilience(ugraph_upa, fast_targeted_order(ugraph_upa)))
 
     resilience_network /= 3.0
     resilience_er /= 3.0

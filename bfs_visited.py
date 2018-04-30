@@ -5,6 +5,16 @@ Project 2
 from collections import deque
 
 
+def copy_graph(graph):
+    """
+    Make a copy of a graph
+    """
+    new_graph = {}
+    for node in graph:
+        new_graph[node] = set(graph[node])
+    return new_graph
+
+
 def bfs_visited(ugraph, start_node):
     """
     bfs on undirected graph
@@ -88,13 +98,13 @@ def compute_resilience(ugraph, attack_order):
     :param attack_order: the node to be removed in this order
     :return: list of the largest connected components after removing each node
     """
-    resilience = [largest_cc_size(ugraph)]
+    new_graph = copy_graph(ugraph)
+    resilience = [largest_cc_size(new_graph)]
     for attacked_node in attack_order:
-        remove_node(ugraph, attacked_node)
-        resilience.append(largest_cc_size(ugraph))
+        remove_node(new_graph, attacked_node)
+        resilience.append(largest_cc_size(new_graph))
 
     return resilience
-
 
 # EX_GRAPH1 = {0: {1, 4, 5}, 1: {2, 6}, 2: {3}, 3: {0}, 4: {1}, 5: {2}, 6: set()}
 # remove_node(EX_GRAPH1, 6)
