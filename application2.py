@@ -24,6 +24,7 @@ def copy_graph(graph):
         new_graph[node] = set(graph[node])
     return new_graph
 
+
 def delete_node(ugraph, node):
     """
     Delete a node from an undirected graph
@@ -32,6 +33,7 @@ def delete_node(ugraph, node):
     ugraph.pop(node)
     for neighbor in neighbors:
         ugraph[neighbor].remove(node)
+
 
 def targeted_order(ugraph):
     """
@@ -61,7 +63,6 @@ def targeted_order(ugraph):
     return order
 
 
-
 ##########################################################
 # Code for loading computer network graph
 
@@ -78,7 +79,7 @@ def load_graph(graph_url):
     graph_file = urllib2.urlopen(graph_url)
     graph_text = graph_file.read()
     graph_lines = graph_text.split('\n')
-    graph_lines = graph_lines[ : -1]
+    graph_lines = graph_lines[: -1]
 
     print "Loaded graph with", len(graph_lines), "nodes"
 
@@ -87,10 +88,38 @@ def load_graph(graph_url):
         neighbors = line.split(' ')
         node = int(neighbors[0])
         answer_graph[node] = set([])
-        for neighbor in neighbors[1 : -1]:
+        for neighbor in neighbors[1: -1]:
             answer_graph[node].add(int(neighbor))
 
     return answer_graph
+
+
+# Fast algorithm for generating targeted order based on max degree
+def fast_targeted_order(ugraph):
+    """
+    compute a attach order based on node degree
+    :param ugraph: input graph, need to be undirected
+    :return: a list of the nodes in the graph in decreasing order of their degrees
+    """
+    new_graph = copy_graph(ugraph)
+    num_nodes = len(new_graph)
+    # Init to empty sets for each degree 0 to n-1
+    degree_set = {i: set() for i in xrange(num_nodes)}
+
+    for node in new_graph:
+        degree_set[len(new_graph[node])].add(node)
+
+    l_attack = []
+    for degree in xrange(num_nodes - 1, -1, -1):
+        while degree_set[degree]:
+            target_node = degree_set[degree].pop()
+            for neigh in new_graph[target_node]:
+                deg_neighbor = len(new_graph[neigh])
+                degree_set[deg_neighbor].remove(neigh)
+                degree_set[deg_neighbor - 1].add(neigh)
+            l_attack.append(target_node)
+            delete_node(new_graph, target_node)
+    return l_attack
 
 
 ##########################################################
@@ -183,27 +212,66 @@ if __name__ == '__main__':
     print "ER probability", er_prob
     print "UPA m", average_out_degree
 
+    ####################################################
+    # Resilience under random attack order
+
     # Take the average of 3 resilience
     for dummy_idx in range(3):
         cloned_network = copy_graph(network_graph)
         resilience_network = resilience_network + \
-                np.array(bfs_visited.compute_resilience(cloned_network, random_order(cloned_network, num_nodes_total)))
+                             np.array(bfs_visited.compute_resilience(cloned_network,
+                                                                     random_order(cloned_network, num_nodes_total)))
         cloned_er = copy_graph(ugraph_er)
         resilience_er = resilience_er + \
-            np.array(bfs_visited.compute_resilience(cloned_er, random_order(cloned_er, num_nodes_total)))
+                        np.array(bfs_visited.compute_resilience(cloned_er, random_order(cloned_er, num_nodes_total)))
         cloned_upa = copy_graph(ugraph_upa)
         resilience_upa = resilience_upa + \
-            np.array(bfs_visited.compute_resilience(cloned_upa, random_order(cloned_upa, num_nodes_total)))
+                         np.array(bfs_visited.compute_resilience(cloned_upa, random_order(cloned_upa, num_nodes_total)))
 
     resilience_network /= 3.0
     resilience_er /= 3.0
     resilience_upa /= 3.0
 
     xvals = range(num_nodes_total + 1)
+    plt.figure()
     plt.plot(xvals, resilience_network, '-b', label='network graph')
     plt.plot(xvals, resilience_er, '-r', label='er graph, p=' + str(er_prob))
     plt.plot(xvals, resilience_upa, '-m', label='UPA graph, m=' + str(average_out_degree))
     plt.legend(loc='upper right')
     plt.xlabel("Number of nodes removed")
-    plt.ylabel("Largest size of connected componentsap")
+    plt.ylabel("Largest size of connected components")
+
+    ####################################################
+    # Resilience under targeted attack order
+
+    resilience_network = np.zeros(1 + num_nodes_total)
+    resilience_er = np.zeros(1 + num_nodes_total)
+    resilience_upa = np.zeros(1 + num_nodes_total)
+
+    for dummy_idx in range(3):
+        cloned_network = copy_graph(network_graph)
+        resilience_network = resilience_network + \
+                             np.array(bfs_visited.compute_resilience(cloned_network,
+                                                                     fast_targeted_order(cloned_network)))
+        cloned_er = copy_graph(ugraph_er)
+        resilience_er = resilience_er + \
+                        np.array(bfs_visited.compute_resilience(cloned_er, fast_targeted_order(cloned_er)))
+        cloned_upa = copy_graph(ugraph_upa)
+        resilience_upa = resilience_upa + \
+                         np.array(bfs_visited.compute_resilience(cloned_upa, fast_targeted_order(cloned_upa)))
+
+    resilience_network /= 3.0
+    resilience_er /= 3.0
+    resilience_upa /= 3.0
+
+    plt.figure()
+    plt.plot(xvals, resilience_network, '-b', label='network graph')
+    plt.plot(xvals, resilience_er, '-r', label='er graph, p=' + str(er_prob))
+    plt.plot(xvals, resilience_upa, '-m', label='UPA graph, m=' + str(average_out_degree))
+    plt.legend(loc='upper right')
+    plt.xlabel("Number of nodes removed")
+    plt.ylabel("Largest size of connected components")
+    plt.title("Graph resilience comparison under targeted attack")
+
+    # Show all plots
     plt.show()
