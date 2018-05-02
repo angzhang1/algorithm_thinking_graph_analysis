@@ -5,6 +5,7 @@ Implement weighted union find with path compression
 import bfs_visited as bfs
 import application2 as ap
 
+
 class UnionFind(object):
     """
     Weighted union find class with path compression
@@ -85,7 +86,7 @@ class UnionFind(object):
             self.count -= 1
 
 
-def compute_resilience_uf(ugraph, attack_order):
+def compute_resilience_uf_full_list(ugraph, attack_order):
     """
     resilience under attack order using union find algorithm
     :param ugraph:
@@ -104,6 +105,28 @@ def compute_resilience_uf(ugraph, attack_order):
     return resilience
 
 
+def compute_resilience_uf(ugraph, attack_order):
+    """
+
+    :param ugraph:
+    :param attack_order:
+    :return:
+    """
+    # used in the return statement
+    len_attack = len(attack_order)
+
+    if len(ugraph) != len(attack_order):
+        attack_set = set(attack_order)
+        for node in ugraph:
+            if node not in attack_set:
+                attack_order.append(node)
+
+    # your union find implementation
+    sizes = compute_resilience_uf_full_list(ugraph, attack_order)
+
+    # sizes is a list of CC sizes
+    return sizes[:len_attack + 1]
+
 if __name__ == '__main__':
     # Unit test
     GRAPH4 = {0: set([1, 2, 3, 4]),
@@ -117,7 +140,8 @@ if __name__ == '__main__':
 
     print len(GRAPH4)
 
-    attack = ap.random_order(GRAPH4, len(GRAPH4))
+    attack = ap.random_order(GRAPH4, 2)
+    attack = []
     print attack
     print compute_resilience_uf(GRAPH4, attack)
     print bfs.compute_resilience(GRAPH4, attack)

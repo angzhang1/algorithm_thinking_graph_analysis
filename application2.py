@@ -230,6 +230,7 @@ if __name__ == '__main__':
     ####################################################
     # Resilience under random attack order
 
+    start = time.time()
     # Take the average of 3 resilience
     for dummy_idx in range(3):
         resilience_network = resilience_network + \
@@ -243,6 +244,9 @@ if __name__ == '__main__':
     resilience_network /= 3.0
     resilience_er /= 3.0
     resilience_upa /= 3.0
+
+    end = time.time()
+    print end - start
 
     xvals = range(num_nodes_total + 1)
     plt.figure()
